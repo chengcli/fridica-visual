@@ -101,3 +101,25 @@ Multiple tasks may overlap. Silence never expires an interval.
 Pass `complete(prompt)` to use another LLM returning JSON text. Use a distinct
 `model` identifier for each backend/model when sharing a checkpoint. Invalid
 batches raise an error; completed batches are reusable on the next run.
+
+## Animate the conversation
+
+From the repository directory, render the interactive replay:
+
+```bash
+python animate_conversation.py ../conversation-graph.json ../conversation-labels.json ../participant-status.json ../conversation-replay.html
+```
+
+Open the resulting file in a browser. Play or scrub across all messages, jump
+to a turning point, and click a participant to inspect their tasks in the
+current thread. The full message can be opened while paused. Nodes retain
+their positions across threads. An arrow runs from the speaker to each person
+mentioned; repeated mentions in the same message share one arrow, which is
+solid when any occurrence addresses that person. The task panel shows all
+current intervals, including closed ones, with the supporting evidence.
+
+Use an output path ending in `.mp4` to render a silent 720p cut with Pillow,
+FFmpeg (libx264), and DejaVu fonts. The video shows an excerpt of each message
+and the speaker's latest observed task in that thread. Playback compresses time
+between messages. Five editorial cues are anchored to exact source phrases in
+this snapshot and get longer holds. Both outputs embed conversation content.
