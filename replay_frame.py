@@ -1,12 +1,10 @@
 """Shared frame layout for the interactive and encoded replays."""
 from collections import defaultdict
-from datetime import datetime
 from html import escape
 from math import cos, sin, pi, hypot
 import re
 import textwrap
-from zoneinfo import ZoneInfo
-from refactor_timeline import chart
+from refactor_timeline import chart, elapsed_hhmm
 
 FRAMES_PER_SECOND = 4
 
@@ -65,7 +63,6 @@ def compose_frames(data):
     for t in data["tasks"]:
         changes[t["start"]].append(t)
     latest = {}
-    tz = ZoneInfo("America/New_York")
     groups = list(frame_groups(messages))
     for number, ids in enumerate(groups,1):
         active = defaultdict(list)
@@ -83,7 +80,6 @@ def compose_frames(data):
              caption(1400,54,f'FRAME {number:03} / {len(groups)}',18,anchor='end'),
              '<path d="M38 86 H1402" stroke="#414957"/>',
              caption(40,125,'Participants',22,bold=True),
-             caption(690,125,'Outer ring = active speaker',16,'#c5c9d2',anchor='end'),
              '<ellipse cx="361" cy="384" rx="240" ry="191" fill="none" stroke="#36404f" stroke-dasharray="3 8"/>']
         for slot,(m,kind,color) in enumerate(items):
             svg.append(f'<defs><marker id="tip{slot}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="{color}"/></marker></defs>')
@@ -118,14 +114,14 @@ def compose_frames(data):
         for slot,(m,kind,color) in enumerate(items):
             y=438+slot*65
             cue=m['cue']
-            stamp=datetime.fromtimestamp(float(m['ts']),tz).strftime('%H:%M EST')
+            stamp=elapsed_hhmm(float(m['ts'])-float(messages[0]['ts']))
             quote=clean(cue[0] if cue else m['text'])
             svg.append(f'<g data-message="{ids[slot]}" role="button" tabindex="0"><rect x="740" y="{y}" rx="7" width="663" height="59" fill="{PANEL}"/><rect x="740" y="{y+5}" width="4" height="49" fill="{color}"/>')
             svg.append(caption(756,y+21,f'{slot+1}   {m["sender"]}   ·   {stamp}   ·   T{m["thread"]+1} / R{m["round"]}',15,bold=True))
             svg.append(caption(1386,y+21,(cue[1] if cue else kind.replace('_',' ')).upper(),14,color,anchor='end',bold=True))
             svg.append(caption(756,y+46,textwrap.shorten(quote,68,placeholder='…'),16,serif=True))
             svg.append('</g>')
-        svg.extend([caption(40,662,'Last observed task status',19,bold=True),
+        svg.extend([caption(40,662,'Task status',19,bold=True),
                     caption(741,662,'Conversation type',19,bold=True)])
         for idx,(name,color) in enumerate(STATES.items()):
             x,y=40+(idx%3)*225,693+idx//3*31

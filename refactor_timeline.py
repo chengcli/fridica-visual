@@ -1,7 +1,11 @@
 """Source-anchored Snapy V3 milestones; all times come from the matching messages."""
 import re
-from datetime import datetime
-from zoneinfo import ZoneInfo
+BASELINE_LINES = 42677
+
+
+def elapsed_hhmm(seconds):
+    hours, minutes = divmod(int(seconds) // 60, 60)
+    return f"{hours:02d}:{minutes:02d}"
 
 # Selected first reports and substantive revisions. Replace an existing lane entry.
 REPORTS = [
@@ -47,7 +51,7 @@ def select_v3(graph, labels, intervals):
 
 # A response may change a document or a scoped patch without changing the design total.
 EFFECTS = [
-    ("a provisional 28,691 after figure", "Shared lines counted twice", "Budget corrected: 14,021 → 13,986 (−35)"),
+    ("a provisional 28,691 after figure", "Shared lines counted twice", "Revised design: 28,691 lines remaining"),
     ("RULING V3-4 closes my S rev 2.3 item 1 conflict", "Corner fill missing", "V3-4 closes the corner-fill conflict"),
     ("*`DESIGN.rst` is approved*", "Nine design fixes", "Design revision approved"),
     ("commit net +619; generated headers", "O4 exceeds its budget", "O4 patch growth: +846 → +619 (227 fewer)"),
@@ -73,8 +77,8 @@ def milestones(messages):
                 value = sum(lanes.values())
             else:
                 continue
-            events.append(dict(i=i,series="curve",value=value,delta=value-previous,
-                               scope="Whole design" if reconciled else "Reported lane subtotal",label=label))
+            events.append(dict(i=i,series="curve",value=BASELINE_LINES-value,delta=previous-value,
+                               label=label))
         for quote,kind,label in REVIEWS:
             if quote in m["text"] and quote not in seen:
                 events.append(dict(i=i,series="review",kind=kind,label=label));seen.add(quote)
@@ -94,19 +98,18 @@ def chart(messages, events, end, caption):
     def x(i):
         return 805 + 563*(float(messages[i]["ts"])-start)/max(1,finish-start)
     def y(lines):
-        return 274-110*lines/16000
+        return 274-132*(lines-26000)/18000
     known=[e for e in events if e["i"]<=end]
     budgets=[e for e in known if e["series"]=="curve"]
     reviews=[e for e in known if e["series"]=="review"]
     last=budgets[-1] if budgets else None
     mint, coral, muted="#81e7cb","#ff95a5","#bac4cf"
-    parts=[caption(742,119,"V3 design convergence",23,bold=True),
-           caption(1398,119,"Projected lines removed",15,anchor="end")]
-    for amount in (0,8000,16000):
+    parts=[caption(742,119,"Design Convergence",23,bold=True)]
+    for amount in (28000,35000,42000):
         at=y(amount)
         parts.extend([f'<path d="M805 {at}h563" stroke="#34404c"/>',caption(794,at+4,str(amount//1000)+"k",13,anchor="end")])
     # Connect only revealed observations. Smooth joins show direction, not measured intermediate counts.
-    px,py=x(0),y(0)
+    px,py=x(0),y(BASELINE_LINES)
     path=f"M{px} {py}"
     for b in budgets:
         xx,yy=x(b["i"]),y(b["value"])
@@ -123,19 +126,16 @@ def chart(messages, events, end, caption):
         author=messages[last["i"]]["sender"]
         parts.extend([f'<g data-message="{last["i"]}"><circle cx="{now}" cy="{py}" r="14" fill="{mint}"/>',
                       caption(now,py+4,author,12,"#112a28",anchor="middle",bold=True),'</g>',
-                      caption(742,347,f'{last["scope"]} · {last["value"]:,} lines ({last["delta"]:+,})',17,mint,bold=True),
+                      caption(742,347,f'Refractored lines · {last["value"]:,}',17,mint,bold=True),
                       caption(1399,347,f'{author} · {last["label"]}',14,muted,anchor="end")])
     # Stagger close-in-time requests across rows, with a guide to their precise report time.
     for j,r in enumerate(reviews):
         xx=x(r["i"]); yy=176+(j%3)*29
         parts.append(f'<g data-message="{r["i"]}"><title>{r["label"]}</title><path d="M{xx} {yy+10}V278" stroke="{coral}" stroke-opacity=".4" stroke-dasharray="2 4"/><path d="M{xx-14} {yy}l14 -11 14 11 -14 11z" fill="#553244" stroke="{coral}"/>')
         parts.extend([caption(xx,yy+4,messages[r["i"]]["sender"],10,anchor="middle",bold=True),'</g>'])
-    tz=ZoneInfo("America/New_York")
     for f,anchor in [(0,'start'),(.5,'middle'),(1,'end')]:
-        stamp=datetime.fromtimestamp(start+(finish-start)*f,tz).strftime('%b %d %H:%M')
+        stamp=elapsed_hhmm((finish-start)*f)
         parts.append(caption(805+563*f,303,stamp,13,anchor=anchor))
-    parts.append(caption(742,143,"● Estimate author     ◇ Revision requested",14,muted))
-    parts.append(caption(1398,143,"Time · EST",14,muted,anchor="end"))
     activity=[e for e in known if e["series"] in ("review","effect")]
     if activity:
         e=activity[-1]

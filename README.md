@@ -125,12 +125,12 @@ requires FFmpeg with librsvg and libx264. It renders the same SVG frames as the
 browser. Default playback is four grouped frames per second, including turning points.
 
 The replay includes the V3 kickoff, nine design lanes, debrief, both implementation
-waves, and the Wave 0 reviewer follow-up. Its upper-right chart uses message time
-in US Eastern time. One curve traces the projected reduction. Before the first
+waves, and the Wave 0 reviewer follow-up. Its upper-right chart and message cards use elapsed hours and minutes from kickoff.
+The curve shows estimated remaining lines: 42,677 minus the reported reduction. Before the first
 integrated draft, it sums selected reported lane estimates, replacing an earlier
 estimate when the same lane revises its budget. This is a provisional subtotal;
 scope transfers and conditional cuts can affect it. The first integrated draft
-replaces the subtotal. The last integrated estimate is 14,135 lines removed.
+replaces the subtotal. The final estimate is 28,542 lines remaining.
 Smooth joins connect observations; intermediate heights are illustrative.
 
 The mint circle identifies the author of the latest plotted estimate. Coral
