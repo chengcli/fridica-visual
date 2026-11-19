@@ -58,10 +58,10 @@ def _apply(events, batch, roster, state):
         if not isinstance(task, str) or not task.strip():
             raise ValueError("Missing task description")
         if (origin, task) not in origins and origin != ts:
-            raise ValueError("Follow-up must identify a previously introduced task")
+            raise ValueError(f"Unknown task reference {task!r} with origin_ts {origin!r} at {ts!r}")
         origins.add((origin, task))
         if not isinstance(quote, str) or not quote.strip() or quote not in messages[ts]["text"]:
-            raise ValueError("Evidence must occur in the cited message")
+            raise ValueError(f"Evidence {quote!r} must occur verbatim in message {ts!r}")
         if status == "waiting":
             if not isinstance(wait, str) or not wait.strip():
                 raise ValueError("Waiting requires a dependency")
@@ -84,6 +84,26 @@ def _apply(events, batch, roster, state):
                    evidence=quote, waiting_for=wait, outcome=outcome)
         state[key] = row
         yield row
+
+
+def _generate_batch(prompt, model, batch, roster, state):
+    guidance = (
+        "For an existing task copy both task and origin_ts exactly from latest_intervals "
+        "or an earlier event in this batch. For a newly observed task set origin_ts to "
+        "the current event's ts. Output raw JSON without Markdown fences."
+    )
+    for attempt in range(4):
+        raw = _claude(prompt, model, INSTRUCTION + "\n" + guidance)
+        try:
+            # Checking a tentative change can close a prior interval. Isolate retries
+            # from the live rows, which are also referenced by the returned timeline.
+            trial = {key: row.copy() for key, row in state.items()}
+            list(_apply(json.loads(raw), batch, roster, trial))
+            return raw
+        except (ValueError, KeyError, TypeError) as error:
+            if attempt == 3:
+                raise
+            guidance += f"\nThe previous response failed validation: {error}. Regenerate the batch."
 
 
 def auto_label_participant_status(graph, labels, *, checkpoint=None, batch_size=6,
@@ -123,7 +143,7 @@ def auto_label_participant_status(graph, labels, *, checkpoint=None, batch_size=
                 if hit:
                     raw = hit[0]
                 elif complete is None:
-                    raw = _claude(prompt, model, INSTRUCTION)
+                    raw = _generate_batch(prompt, model, batch, roster, state)
                 else:
                     raw = complete(prompt)
                 result.extend(_apply(json.loads(raw), batch, roster, state))
