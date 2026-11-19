@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import sqlite3
 import subprocess
 from collections import defaultdict
@@ -33,7 +34,12 @@ def _claude(prompt, model):
                "--system-prompt", INSTRUCTION]
     if model:
         command.extend(["--model", model])
-    return subprocess.run(command, input=prompt, text=True, capture_output=True,
+    env = os.environ.copy()
+    if env.get("CLAUDE_API_TOKEN") and not any(env.get(name) for name in (
+        "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"
+    )):
+        env["ANTHROPIC_API_KEY"] = env["CLAUDE_API_TOKEN"]
+    return subprocess.run(command, input=prompt, text=True, capture_output=True, env=env,
                           check=True, timeout=300).stdout
 
 
