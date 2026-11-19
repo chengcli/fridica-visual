@@ -124,9 +124,10 @@ def chart(messages, events, end, caption):
         parts.append(f'<circle data-message="{b["i"]}" cx="{x(b["i"])}" cy="{y(b["value"])}" r="3.5" fill="{mint}"><title>{b["label"]}: {b["value"]:,}</title></circle>')
     if last:
         author=messages[last["i"]]["sender"]
+        net_change = f'{last["value"] - BASELINE_LINES:,}'.replace("-", "−")
         parts.extend([f'<g data-message="{last["i"]}"><circle cx="{now}" cy="{py}" r="14" fill="{mint}"/>',
                       caption(now,py+4,author,12,"#112a28",anchor="middle",bold=True),'</g>',
-                      caption(742,347,f'Refractored lines · {last["value"]:,}',17,mint,bold=True),
+                      caption(742,347,f'Refactored lines · {net_change}',17,mint,bold=True),
                       caption(1399,347,f'{author} · {last["label"]}',14,muted,anchor="end")])
     # Stagger close-in-time requests across rows, with a guide to their precise report time.
     for j,r in enumerate(reviews):
