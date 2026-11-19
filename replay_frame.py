@@ -6,6 +6,7 @@ from math import cos, sin, pi, hypot
 import re
 import textwrap
 from zoneinfo import ZoneInfo
+from refactor_timeline import chart
 
 FRAMES_PER_SECOND = 4
 
@@ -57,7 +58,6 @@ def compose_frames(data):
     nodes, messages = data["nodes"], data["messages"]
     names = {n["id"]:(n.get("names") or [n["id"]])[0] for n in nodes}
     def clean(text):
-        text=re.sub(r"<@([A-Z0-9]+)(?:\|[^>]*)?>",lambda m:slack.get(m[1],m[1]),text)
         return " ".join(text.replace("*","").replace("`","").split())
     pos = {n["id"]:(361+240*cos(2*pi*i/len(nodes)-pi/2),384+191*sin(2*pi*i/len(nodes)-pi/2))
            for i,n in enumerate(nodes)}
@@ -79,7 +79,7 @@ def compose_frames(data):
             items.append((m,primary,KINDS[primary]))
         svg=['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 840" width="1440" height="840" role="img" aria-label="Conversation replay frame">',
              f'<rect width="1440" height="840" fill="{BG}"/>',
-             caption(38,62,'Fridica / Conversation replay',38,serif=True),
+             caption(38,62,'Fridica / Snapy V3 refactor',38,serif=True),
              caption(1400,54,f'FRAME {number:03} / {len(groups)}',18,anchor='end'),
              '<path d="M38 86 H1402" stroke="#414957"/>',
              caption(40,125,'Participants',22,bold=True),
@@ -92,6 +92,11 @@ def compose_frames(data):
                 targets[v["target"]]=targets.get(v["target"],False) or v["role"]=="addressed"
             for target,direct in targets.items():
                 svg.append(connection(pos[m["sender"]],pos[target],slot,color,direct))
+        leads=[e for e in data["milestones"] if e["series"]=="lead" and e["i"]<=ids[-1]]
+        lead=messages[leads[-1]["i"]]["sender"] if leads else None
+        reviewers={m["sender"] for m,_,_ in items if "review" in m["functions"]}
+        reviewers.update(messages[e["i"]]["sender"] for e in data["milestones"]
+                         if e["series"]=="review" and e["i"] in ids)
         for who,(x,y) in pos.items():
             state=latest.get(who,"unobserved")
             color=STATES[state]
@@ -101,26 +106,24 @@ def compose_frames(data):
             svg.append(f'<circle cx="{x}" cy="{y}" r="24" fill="{color}"/>')
             svg.extend([caption(x,y+6,who,18,BG,anchor='middle',bold=True),
                         caption(x,y+53,state.replace("_"," "),15,color,anchor='middle',bold=who in active)])
+            role = "LEAD · REVIEW" if who==lead and who in reviewers else "LEAD" if who==lead else "REVIEW" if who in reviewers else ""
+            if role:
+                svg.append(caption(x,y-63,role,13,"#ffd273",anchor="middle",bold=True))
             if who in active:
                 svg.append(caption(x,y-39,' / '.join(active[who]),15,anchor='middle',bold=True))
             svg.append('</g>')
-        svg.extend([caption(744,125,'Messages',22,bold=True),caption(1400,125,f'{ids[0]+1:,}–{ids[-1]+1:,} of {len(messages):,}',17,'#c5c9d2',anchor='end')])
+        svg.extend(chart(messages,data["milestones"],ids[-1],caption))
+        svg.extend([caption(743,425,'Conversation',21,bold=True),
+                    caption(1400,425,f'{ids[0]+1:,}–{ids[-1]+1:,} of {len(messages):,}',15,anchor='end')])
         for slot,(m,kind,color) in enumerate(items):
-            y=151+slot*159
+            y=438+slot*65
             cue=m['cue']
-            svg.append(f'<g data-message="{ids[slot]}" role="button" tabindex="0"><rect x="740" y="{y}" rx="12" width="663" height="149" fill="{PANEL}"/><rect x="740" y="{y+12}" width="4" height="125" fill="{color}"/>')
-            svg.append(caption(762,y+28,f'{slot+1}   {names[m["sender"]]}',20,bold=True))
-            svg.append(caption(1380,y+28,kind.replace('_',' ').upper(),16,color,anchor='end',bold=True))
+            stamp=datetime.fromtimestamp(float(m['ts']),tz).strftime('%H:%M EST')
             quote=clean(cue[0] if cue else m['text'])
-            subtitle=cue[1]+' · '+cue[2] if cue else ''
-            if subtitle:
-                svg.append(caption(762,y+57,subtitle,18,'#ffcb94',bold=True))
-            lines=textwrap.wrap(quote,width=50)
-            limit=2 if cue else 3
-            for j,line in enumerate(lines[:limit]):
-                svg.append(caption(762,y+(80 if cue else 57)+j*24,line+('…' if j==limit-1 and len(lines)>limit else ''),19,serif=True))
-            stamp=datetime.fromtimestamp(float(m['ts']),tz).strftime('%b %d · %H:%M:%S %Z')
-            svg.append(caption(762,y+134,f'{stamp}   /   Thread {m["thread"]+1} · Turn {m["turn"]} · Round {m["round"]}',15,'#b4becb'))
+            svg.append(f'<g data-message="{ids[slot]}" role="button" tabindex="0"><rect x="740" y="{y}" rx="7" width="663" height="59" fill="{PANEL}"/><rect x="740" y="{y+5}" width="4" height="49" fill="{color}"/>')
+            svg.append(caption(756,y+21,f'{slot+1}   {m["sender"]}   ·   {stamp}   ·   T{m["thread"]+1} / R{m["round"]}',15,bold=True))
+            svg.append(caption(1386,y+21,(cue[1] if cue else kind.replace('_',' ')).upper(),14,color,anchor='end',bold=True))
+            svg.append(caption(756,y+46,textwrap.shorten(quote,68,placeholder='…'),16,serif=True))
             svg.append('</g>')
         svg.extend([caption(40,662,'Last observed task status',19,bold=True),
                     caption(741,662,'Conversation type',19,bold=True)])

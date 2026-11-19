@@ -1,8 +1,8 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fridica / Conversation replay</title>
+<title>Fridica / Snapy V3 refactor</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#11151c;color:#f4f3ed;font:16px/1.45 Inter,system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:0 2vw 3rem}svg{display:block;width:100%;height:auto}svg [role=button],button,select,summary{cursor:pointer}.active-ring{animation:pulse 1.6s ease-out infinite}@keyframes pulse{50%{stroke-width:5;opacity:.75}}@media(prefers-reduced-motion:reduce){.active-ring{animation:none}}svg [role=button]:focus-visible{outline:2px solid white}nav,.row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}nav{padding:12px 0 20px;border-bottom:1px solid #465060}input{flex:1;min-width:130px;accent-color:#a6e8d4}button,select{border:1px solid #556171;background:#1a202a;color:inherit;font:inherit;border-radius:6px;padding:7px 11px}button:disabled{opacity:.4}button:hover,select:hover{border-color:#a6e8d4}#play{background:#a6e8d4;color:#11151c;font-weight:700;min-width:75px}h2{font:24px Georgia,serif;margin:16px 0}.panels{display:grid;grid-template-columns:1fr 1fr;gap:24px}details{border-top:1px solid #414957;padding:9px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;max-height:320px;overflow:auto}#cuts button{display:block;margin:5px 0;text-align:left}.row{justify-content:space-between}#tasks{max-height:330px;overflow:auto}.tag{font-size:13px;color:#d0dadf}.mobile-title{display:none}@media(max-width:760px){.panels{grid-template-columns:1fr}.mobile-title{display:block;font:28px Georgia,serif;margin:16px 0}main{padding:0 12px 32px}nav{position:sticky;bottom:0;background:#11151c;z-index:1}input{flex-basis:100%;order:4}}
-</style><main><h1 class="mobile-title">Fridica / Conversation replay</h1><div id="stage"></div>
+</style><main><h1 class="mobile-title">Fridica / Snapy V3 refactor</h1><div id="stage"></div>
 <nav aria-label="Playback"><button id="play">Play</button><button id="prev" aria-label="Previous frame">←</button><button id="next" aria-label="Next frame">→</button><input id="seek" type="range" min="0" value="0" aria-label="Frame position"><span id="counter"></span><select id="speed" aria-label="Playback speed"><option value=".5">0.5×</option><option value="1" selected>1×</option><option value="3">3×</option><option value="8">8×</option></select></nav>
 <div class="panels"><section><h2>Messages in this frame</h2><div id="messages"></div><h2>Turning points</h2><div id="cuts"></div></section><section><div class="row"><h2>Task status</h2><select id="person" aria-label="Participant"></select></div><label>Thread at message <select id="context"></select></label><div id="tasks"></div></section></div></main>
 <script id="data" type="application/json">__REPLAY_DATA__</script><script>
@@ -17,7 +17,7 @@ function status(){const index=Number(el('context').value),m=messages[index],pers
  if(!current.length)add(box,'p','No task state observed for '+person+' in thread '+(m.thread+1)+'.');
  for(const t of current){const d=add(box,'details','');add(d,'summary',person+' · '+t.status.replaceAll('_',' ')+' · '+t.task);add(d,'p',t.evidence);if(t.waiting||t.outcome)add(d,'p',t.waiting?'Waiting for '+t.waiting:t.outcome)}}
 function stop(){clearTimeout(timer);playing=false;el('play').textContent='Play'}
-function inspect(i){stop();el('context').value=i;el('person').value='';status();const d=el('msg'+i);d.open=true;d.scrollIntoView({block:'nearest'})}
+function inspect(i){stop();if(!frames[position].ids.includes(i))show(frames.findIndex(f=>f.ids.includes(i)));el('context').value=i;el('person').value='';status();const d=el('msg'+i);d.open=true;d.scrollIntoView({block:'nearest'})}
 function show(i){
  position=i;const frame=frames[i],stage=el('stage');stage.innerHTML=frame.svg;
  if(narrow.matches){const full=stage.firstElementChild;stage.replaceChildren();

@@ -84,7 +84,9 @@ def anonymize(data):
 
 
 def render_replay(graph, labels, intervals, output):
-    data = replay_data(graph, labels, intervals)
+    from refactor_timeline import milestones, select_v3
+    data = replay_data(*select_v3(graph, labels, intervals))
+    data["milestones"] = milestones(data["messages"])
     anonymize(data)
     from replay_frame import compose_frames
     frames = compose_frames(data)

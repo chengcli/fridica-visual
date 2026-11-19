@@ -123,3 +123,15 @@ points, and task evidence. The source snapshots remain the input for regeneratio
 For a silent 1440×840 video, use an output path ending in `.mp4`. The encoder
 requires FFmpeg with librsvg and libx264. It renders the same SVG frames as the
 browser. Default playback is four grouped frames per second, including turning points.
+
+The replay includes the V3 kickoff, nine design lanes, debrief, both implementation
+waves, and the Wave 0 reviewer follow-up. Its upper-right chart uses message time
+in US Eastern time. Blue points are selected local design estimates; the purple
+step line is the whole Snapy design estimate. The green series is the reported
+net diff of the Wave 1 lane O patch stack, including files outside the source
+budget. Neither series measures a merged whole-project reduction. The dashed
+line is the requested reduction from the pinned baseline. A series starts only
+when a message supplies a figure. Selecting a chart point or review triangle
+opens its source message. The lead badge follows the handoff from CL to XZ;
+the review badge marks a reviewer speaking in the current frame. Pink triangles
+mark selected confirmed findings and change requests.
