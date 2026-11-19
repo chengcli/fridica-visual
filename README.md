@@ -45,3 +45,11 @@ someone mentions you in round N, your subsequent messages in that thread
 reach at least round N+1. Self-mentions create edges but do not advance rounds.
 This lets independent exchanges overlap in time. A round does not establish
 that a later message answered a particular question.
+
+To include plain-text references, supply participant names and nicknames with
+the same workspace/user keys as labels, for example
+`build_graph([database], names={("workspace", "U123"): ["Alex Kim", "Alex"]})`.
+Edges record their origin in `kind` (`slack` or `name`). Names match whole words
+case-insensitively, including possessives. A Slack tag immediately followed by
+the same person's name counts once. Both forms contribute to mention rounds.
+The local graph snapshot stores the configured aliases in each node's `names`.

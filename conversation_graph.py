@@ -13,8 +13,49 @@ from fridica_visual import _connect
 MENTION = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>")
 
 
-def build_graph(databases, *, labels=None):
+def _name_patterns(names):
+    by_workspace = defaultdict(dict)
+    for (workspace, user), variants in names.items():
+        for name in variants:
+            key = name.strip().lower()
+            if not key or by_workspace[workspace].setdefault(key, user) != user:
+                raise ValueError(f"Empty or ambiguous participant name: {name!r}")
+    patterns = {}
+    for workspace, users in by_workspace.items():
+        choices = "|".join(re.escape(name) for name in sorted(users, key=len, reverse=True))
+        patterns[workspace] = (re.compile(r"(?<!\w)(?:" + choices + r")(?!\w)", re.I), users)
+    return patterns
+
+
+def _mentions(text, names):
+    # Scan Slack markup, code and URLs as units so their contents cannot create name hits.
+    markup = re.compile(r"```[\s\S]*?```|`[^`\n]*`|<[^<>\n]+>|https?://[^\s<>]+")
+    end = 0
+    preceding_tag = None
+    for token in markup.finditer(text):
+        yield from _plain_mentions(text, end, token.start(), names, preceding_tag)
+        tag = MENTION.fullmatch(token.group())
+        preceding_tag = tag.group(1) if tag else None
+        if tag:
+            yield preceding_tag, "slack"
+        end = token.end()
+    yield from _plain_mentions(text, end, len(text), names, preceding_tag)
+
+
+def _plain_mentions(text, start, stop, names, preceding_tag):
+    if names:
+        pattern, users = names
+        for match in pattern.finditer(text, start, stop):
+            user = users[match.group().lower()]
+            if user == preceding_tag and not text[start:match.start()].strip(" \t"):
+                continue
+            yield user, "name"
+
+
+def build_graph(databases, *, labels=None, names=None):
     """Merge stores in priority order. Labels map (workspace, Slack ID) to two letters."""
+    names = names or {}
+    patterns = _name_patterns(names)
     records = {}
     people = set()
     for database in databases:
@@ -25,10 +66,10 @@ def build_graph(databases, *, labels=None):
                 key = (workspace, channel, ts)
                 if key in records:
                     continue
-                targets = MENTION.findall(text)
+                targets = list(_mentions(text, patterns.get(workspace)))
                 records[key] = (root, sender, text, targets)
                 people.add((workspace, sender))
-                people.update((workspace, target) for target in targets)
+                people.update((workspace, target) for target, _ in targets)
 
     aliases = dict(labels or {})
     if any(not re.fullmatch("[A-Z]{2}", label) for label in aliases.values()):
@@ -41,7 +82,7 @@ def build_graph(databases, *, labels=None):
         aliases[person] = next(label for label in available if label not in reserved)
 
     nodes = [
-        dict(id=aliases[person], workspace=person[0], slack_id=person[1])
+        dict(id=aliases[person], workspace=person[0], slack_id=person[1], names=list(names.get(person, ())))
         for person in sorted(people)
     ]
     messages = []
@@ -58,9 +99,9 @@ def build_graph(databases, *, labels=None):
         messages.append(dict(workspace=workspace, channel=channel, root_ts=root,
                              ts=ts, sender=source, text=text, turn=positions[thread],
                              round=round_no))
-        for target_id in targets:
+        for target_id, kind in targets:
             target = aliases[workspace, target_id]
-            edges.append(dict(source=source, target=target, message=message_index))
+            edges.append(dict(source=source, target=target, message=message_index, kind=kind))
             if source != target:
                 incoming_round[thread, target] = max(incoming_round[thread, target], round_no)
     return dict(nodes=nodes, messages=messages, edges=edges)
