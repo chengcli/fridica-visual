@@ -3,19 +3,24 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-# Numeric series have independent scopes. Lane budgets are never summed.
+# Selected first reports and substantive revisions. Replace an existing lane entry.
 REPORTS = [
-    ("At the snapy pin it prints *42,677*", "target", 8536, "Whole-source target"),
-    ("2,655 to 1,867 (-29.7%)", "lane", 2655-1867, "I estimate"),
-    ("minus 882 or 30.7%", "lane", 882, "A forcing estimate"),
-    ("4,677 to 3,680", "lane", 4677-3680, "EF conditional estimate"),
-    ("6,428 to 3,329 against", "lane", 6428-3329, "C estimate"),
-    ("8,472 to 7,898 within S", "lane", 8472-7898, "S estimate"),
-    ("9,830 to 4,473 (54.5%)", "lane", 9830-4473, "O estimate"),
-    ("a provisional 28,691 after figure", "plan", 42677-28691, "Whole-source provisional"),
-    ("42,677 → 28,542 lines", "plan", 42677-28542, "Whole-source design"),
-    ("O1 -2,510, O2 -2,369, O2b -362, O3 +5, O4 +846", "patch", 2510+2369+362-5-846, "O1–O4 patch net"),
-    ("commit net +619; generated headers", "patch", 2510+2369+362-5-619, "O1–O4 revised net"),
+    ("At the snapy pin it prints *42,677*", "origin", 0, "Baseline pinned"),
+    ("2,655 to 1,867 (-29.7%)", "I", 788, "I budget"),
+    ("Lane total: 3,482 to 2,351", "A", 1131, "A budget"),
+    ("4,677 to 3,680", "EF", 997, "EF conditional budget"),
+    ("Lane O's cut is unchanged at 5,627", "O", 5627, "O proposed cut"),
+    ("The evidence supports 4,413 (44.1%) today", "O", 4413, "O evidence check"),
+    ("6,428 to 3,329 against", "C", 3099, "C budget"),
+    ("8,472 to 7,898 within S", "S", 574, "S budget"),
+    ("3,036 → 2,094", "A", 942, "A allocation revised"),
+    ("2,792** without it", "R", 701, "R without conditional deletion"),
+    ("9,830 to 4,473 (54.5%)", "O", 5357, "O revised budget"),
+    ("4,971 to 3,896", "EF", 1075, "EF revised budget"),
+    ("2,821 to 2,032", "I", 789, "I revised budget"),
+    ("42,572 → 28,551", "total", 14021, "First whole-design draft"),
+    ("a provisional 28,691 after figure", "total", 13986, "Corrected baseline and scope"),
+    ("42,677 → 28,542 lines", "total", 14135, "Mesh allocation reconciled"),
 ]
 REVIEWS = [
     ("Your 42,738 = 42,677", "Accounting error", "Shared lines counted twice"),
@@ -40,60 +45,105 @@ def select_v3(graph, labels, intervals):
             [m for m in labels if thread(m) in included], [r for r in intervals if thread(r) in included])
 
 
+# A response may change a document or a scoped patch without changing the design total.
+EFFECTS = [
+    ("a provisional 28,691 after figure", "Shared lines counted twice", "Budget corrected: 14,021 → 13,986 (−35)"),
+    ("RULING V3-4 closes my S rev 2.3 item 1 conflict", "Corner fill missing", "V3-4 closes the corner-fill conflict"),
+    ("*`DESIGN.rst` is approved*", "Nine design fixes", "Design revision approved"),
+    ("commit net +619; generated headers", "O4 exceeds its budget", "O4 patch growth: +846 → +619 (227 fewer)"),
+    ("17 builds in each of 4 cases", "Repeated table rebuild", "Rebuilds per test case: 17 → 0; approved"),
+    ("the commit body is now there", "Commit body missing", "Reworded commit approved; code unchanged"),
+]
+
+
 def milestones(messages):
-    events = []
-    seen = set()
+    events, lanes, seen = [], {}, set()
+    value = 0
+    reconciled = False
     for i,m in enumerate(messages):
-        for quote,series,value,label in REPORTS:
-            if quote in m["text"] and quote not in seen:
-                events.append(dict(i=i,series=series,value=value,label=label));seen.add(quote)
+        for quote,scope,cut,label in REPORTS:
+            if quote not in m["text"] or quote in seen:
+                continue
+            seen.add(quote)
+            previous = value
+            if scope == "total":
+                value, reconciled = cut, True
+            elif not reconciled:
+                lanes[scope] = cut
+                value = sum(lanes.values())
+            else:
+                continue
+            events.append(dict(i=i,series="curve",value=value,delta=value-previous,
+                               scope="Whole design" if reconciled else "Reported lane subtotal",label=label))
         for quote,kind,label in REVIEWS:
             if quote in m["text"] and quote not in seen:
                 events.append(dict(i=i,series="review",kind=kind,label=label));seen.add(quote)
+        for quote,request,label in EFFECTS:
+            if quote in m["text"] and not any(e.get("request")==request for e in events):
+                prior=next((e for e in events if e["series"]=="review" and e["label"]==request),None)
+                if prior:
+                    events.append(dict(i=i,series="effect",request=request,origin=prior["i"],label=label))
         if "V3 design round: kickoff." in m["text"] or "handed approval of `DESIGN.rst` to me" in m["text"]:
             events.append(dict(i=i,series="lead",label="Design lead" if i==0 else "Approval / delivery lead"))
     return events
 
 
 def chart(messages, events, end, caption):
-    """Draw data known by this frame against a fixed wall-clock domain."""
+    """A rolling ledger becomes the integrated estimate at the first full draft."""
     start, finish = float(messages[0]["ts"]), float(messages[-1]["ts"])
     def x(i):
-        return 811 + 568*(float(messages[i]["ts"])-start)/max(1,finish-start)
+        return 805 + 563*(float(messages[i]["ts"])-start)/max(1,finish-start)
     def y(lines):
-        return 279-126*lines/16000
-    colors=dict(plan="#bfacff",patch="#65dfbf",lane="#8acbff",target="#e7ce90")
-    parts=[caption(742,119,"Snapy V3 · lines removed",23,bold=True),caption(1398,119,"Report time · EST",15,anchor="end")]
+        return 274-110*lines/16000
+    known=[e for e in events if e["i"]<=end]
+    budgets=[e for e in known if e["series"]=="curve"]
+    reviews=[e for e in known if e["series"]=="review"]
+    last=budgets[-1] if budgets else None
+    mint, coral, muted="#81e7cb","#ff95a5","#bac4cf"
+    parts=[caption(742,119,"V3 design convergence",23,bold=True),
+           caption(1398,119,"Projected lines removed",15,anchor="end")]
     for amount in (0,8000,16000):
         at=y(amount)
-        parts.extend([f'<path d="M810 {at}h570" stroke="#34404c"/>',caption(799,at+5,str(amount//1000)+"k",14,anchor="end")])
-    observed=[e for e in events if e["i"]<=end]
+        parts.extend([f'<path d="M805 {at}h563" stroke="#34404c"/>',caption(794,at+4,str(amount//1000)+"k",13,anchor="end")])
+    # Connect only revealed observations. Smooth joins show direction, not measured intermediate counts.
+    px,py=x(0),y(0)
+    path=f"M{px} {py}"
+    for b in budgets:
+        xx,yy=x(b["i"]),y(b["value"])
+        mid=(px+xx)/2
+        path+=f" C{mid} {py} {mid} {yy} {xx} {yy}"
+        px,py=xx,yy
     now=x(end)
-    for series,color in colors.items():
-        points=[e for e in observed if e["series"]==series]
-        path=""
-        for e in points:
-            xx,yy=x(e["i"]),y(e["value"])
-            path+=(f'M{xx} {yy}' if not path else f' H{xx} V{yy}')
-            parts.append(f'<circle data-message="{e["i"]}" cx="{xx}" cy="{yy}" r="4" fill="{color}"><title>{e["label"]}: {e["value"]:,} lines</title></circle>')
-        if path and series!="lane":
-            dash=' stroke-dasharray="5 5"' if series=="target" else ""
-            parts.append(f'<path d="{path} H{now}" fill="none" stroke="{color}" stroke-width="2"{dash}/>')
-    for e in observed:
-        if e["series"]=="review":
-            xx=x(e["i"])
-            parts.append(f'<path data-message="{e["i"]}" d="M{xx-5} 284h10l-5 8z" fill="#ff95a5"><title>{messages[e["i"]]["sender"]} · {e["label"]}</title></path>')
-    parts.append(f'<path d="M{now} 146V280" stroke="#d6dee5" stroke-dasharray="2 4"/>')
+    path+=f" H{now}"
+    parts.extend([f'<path d="{path} V274 H805 Z" fill="#253c3b"/>',
+                  f'<path d="{path}" fill="none" stroke="{mint}" stroke-width="3.5"/>'])
+    for b in budgets:
+        parts.append(f'<circle data-message="{b["i"]}" cx="{x(b["i"])}" cy="{y(b["value"])}" r="3.5" fill="{mint}"><title>{b["label"]}: {b["value"]:,}</title></circle>')
+    if last:
+        author=messages[last["i"]]["sender"]
+        parts.extend([f'<g data-message="{last["i"]}"><circle cx="{now}" cy="{py}" r="14" fill="{mint}"/>',
+                      caption(now,py+4,author,12,"#112a28",anchor="middle",bold=True),'</g>',
+                      caption(742,347,f'{last["scope"]} · {last["value"]:,} lines ({last["delta"]:+,})',17,mint,bold=True),
+                      caption(1399,347,f'{author} · {last["label"]}',14,muted,anchor="end")])
+    # Stagger close-in-time requests across rows, with a guide to their precise report time.
+    for j,r in enumerate(reviews):
+        xx=x(r["i"]); yy=176+(j%3)*29
+        parts.append(f'<g data-message="{r["i"]}"><title>{r["label"]}</title><path d="M{xx} {yy+10}V278" stroke="{coral}" stroke-opacity=".4" stroke-dasharray="2 4"/><path d="M{xx-14} {yy}l14 -11 14 11 -14 11z" fill="#553244" stroke="{coral}"/>')
+        parts.extend([caption(xx,yy+4,messages[r["i"]]["sender"],10,anchor="middle",bold=True),'</g>'])
     tz=ZoneInfo("America/New_York")
-    for f in (0,.5,1):
+    for f,anchor in [(0,'start'),(.5,'middle'),(1,'end')]:
         stamp=datetime.fromtimestamp(start+(finish-start)*f,tz).strftime('%b %d %H:%M')
-        parts.append(caption(811+568*f,310,stamp,13,anchor=('start' if f==0 else 'end' if f==1 else 'middle')))
-    for xx,k,label in [(742,'plan','Whole design'),(902,'patch','Lane O patch'),(1068,'lane','Lane estimates'),(1242,'target','Target')]:
-        parts.append(caption(xx,336,'● '+label,15,colors[k]))
-    reports=[e for e in observed if e['series'] in colors]
-    if reports:
-        r=reports[-1]; parts.append(caption(742,360,f'{r["label"]} · {r["value"]:,} lines',16,colors[r["series"]],bold=True))
-    reviews=[e for e in observed if e['series']=='review']
-    if reviews:
-        r=reviews[-1];parts.append(caption(742,385,f'▼ {messages[r["i"]]["sender"]} · {r["kind"]} · {r["label"]}',15,'#ff95a5'))
+        parts.append(caption(805+563*f,303,stamp,13,anchor=anchor))
+    parts.append(caption(742,143,"● Estimate author     ◇ Revision requested",14,muted))
+    parts.append(caption(1398,143,"Time · EST",14,muted,anchor="end"))
+    activity=[e for e in known if e["series"] in ("review","effect")]
+    if activity:
+        e=activity[-1]
+        if e["series"]=="effect":
+            reviewer=messages[e["origin"]]["sender"]
+            note=f'{reviewer} → {messages[e["i"]]["sender"]}   {e["label"]}'
+            parts.append(f'<g data-message="{e["i"]}">'+caption(742,378,note,16,mint,bold=True)+'</g>')
+        else:
+            note=f'{messages[e["i"]]["sender"]}   Revision requested · {e["label"]}'
+            parts.append(f'<g data-message="{e["i"]}">'+caption(742,378,note,16,coral,bold=True)+'</g>')
     return parts

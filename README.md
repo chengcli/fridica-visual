@@ -126,12 +126,15 @@ browser. Default playback is four grouped frames per second, including turning p
 
 The replay includes the V3 kickoff, nine design lanes, debrief, both implementation
 waves, and the Wave 0 reviewer follow-up. Its upper-right chart uses message time
-in US Eastern time. Blue points are selected local design estimates; the purple
-step line is the whole Snapy design estimate. The green series is the reported
-net diff of the Wave 1 lane O patch stack, including files outside the source
-budget. Neither series measures a merged whole-project reduction. The dashed
-line is the requested reduction from the pinned baseline. A series starts only
-when a message supplies a figure. Selecting a chart point or review triangle
-opens its source message. The lead badge follows the handoff from CL to XZ;
-the review badge marks a reviewer speaking in the current frame. Pink triangles
-mark selected confirmed findings and change requests.
+in US Eastern time. One curve traces the projected reduction. Before the first
+integrated draft, it sums selected reported lane estimates, replacing an earlier
+estimate when the same lane revises its budget. This is a provisional subtotal;
+scope transfers and conditional cuts can affect it. The first integrated draft
+replaces the subtotal. The last integrated estimate is 14,135 lines removed.
+Smooth joins connect observations; intermediate heights are illustrative.
+
+The mint circle identifies the author of the latest plotted estimate. Coral
+diamonds identify reviewers at request time. Subsequent linked messages reveal
+the revision outcome, including changes without an impact on the whole-design
+budget. Select a point, diamond, or outcome caption to read the source. The
+participant graph separately marks the project lead and current reviewers.
