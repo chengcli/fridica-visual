@@ -114,5 +114,5 @@ def render_video(data, output):
         manifest=folder/"frames.txt"
         manifest.write_text("\n".join(playlist)+"\n")
         subprocess.run(["ffmpeg","-nostdin","-loglevel","error","-y","-f","concat","-safe","0","-i",
-                        str(manifest),"-vf","fps=10","-c:v","libx264","-threads","3","-preset","veryfast",
+                        str(manifest),"-fps_mode","vfr","-c:v","libx264","-threads","3","-preset","ultrafast",
                         "-crf","21","-pix_fmt","yuv420p","-movflags","+faststart",str(output)],check=True)
