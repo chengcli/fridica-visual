@@ -15,7 +15,7 @@ def render_video(frames, output):
             (folder / name).write_text(frame["svg"])
         encoded = folder / "replay.mp4"
         subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-framerate", str(FRAMES_PER_SECOND),
-                        "-i", str(folder / "%d.svg"), "-c:v",
+                        "-width", "2880", "-height", "1680", "-i", str(folder / "%d.svg"), "-c:v",
                         "libx264", "-threads", "3", "-preset", "ultrafast", "-crf", "20",
                         "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(encoded)], check=True)
         encoded.replace(target)

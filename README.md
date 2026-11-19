@@ -120,7 +120,7 @@ every function label. When several apply, the legend order determines arrow colo
 
 Both exports use two-letter participant codes, including in excerpts, turning
 points, and task evidence. The source snapshots remain the input for regeneration.
-For a silent 1440×840 video, use an output path ending in `.mp4`. The encoder
+For a silent 2880×1680 video, use an output path ending in `.mp4`. The encoder
 requires FFmpeg with librsvg and libx264. It renders the same SVG frames as the
 browser. Default playback is four grouped frames per second, including turning points.
 
