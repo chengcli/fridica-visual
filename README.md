@@ -53,3 +53,25 @@ Edges record their origin in `kind` (`slack` or `name`). Names match whole words
 case-insensitively, including possessives. A Slack tag immediately followed by
 the same person's name counts once. Both forms contribute to mention rounds.
 The local graph snapshot stores the configured aliases in each node's `names`.
+
+## Automatically label all messages
+
+```python
+import json
+from pathlib import Path
+from conversation_labels import auto_label_messages
+
+graph = json.loads(Path("../conversation-graph.json").read_text())
+labels = auto_label_messages(graph, checkpoint="../labels.sqlite3")
+Path("../conversation-labels.json").write_text(json.dumps(labels, indent=2))
+```
+
+The default backend requires a signed-in Claude CLI and sends message text and
+the participant roster to its model. Use `model=` to select a model, or pass
+`complete(prompt)` to use your own LLM client returning JSON text. With a
+custom client, set `model` to a stable backend/model identifier for caching.
+
+Each output row carries the Slack message identity, topics, functions with
+verbatim evidence, and one role per mention occurrence. A failed call or an
+invalid batch raises an exception. Run again with the same checkpoint to
+reuse completed batches. Labels are model judgments and may need review.
