@@ -29,9 +29,9 @@ thanks. Do not infer a commitment from conditional availability alone.
 Function definitions: """ + json.dumps(FUNCTIONS)
 
 
-def _claude(prompt, model):
+def _claude(prompt, model, instruction=INSTRUCTION):
     command = ["claude", "-p", "--tools", "", "--no-session-persistence",
-               "--system-prompt", INSTRUCTION]
+               "--system-prompt", instruction]
     if model:
         command.extend(["--model", model])
     env = os.environ.copy()

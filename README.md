@@ -75,3 +75,29 @@ Each output row carries the Slack message identity, topics, functions with
 verbatim evidence, and one role per mention occurrence. A failed call or an
 invalid batch raises an exception. Run again with the same checkpoint to
 reuse completed batches. Labels are model judgments and may need review.
+
+## Participant status between messages
+
+```python
+import json
+from pathlib import Path
+from participant_status import auto_label_participant_status
+
+graph = json.loads(Path("../conversation-graph.json").read_text())
+labels = json.loads(Path("../conversation-labels.json").read_text())
+intervals = auto_label_participant_status(graph, labels, checkpoint="../status.sqlite3")
+Path("../participant-status.json").write_text(json.dumps(intervals, indent=2))
+```
+
+The function calls Claude in chronological batches within each thread. The output
+contains one interval per observed state change for a participant and task. The
+task's thread, origin timestamp, and description link requests to later answers.
+Each interval includes its exact evidence phrase from the message at `start_ts`.
+Intervals include their start and exclude their end. A null end means that the
+state was last observed in the snapshot, including when that state is closed.
+Before the first observed interval the default is “no open action observed.”
+Multiple tasks may overlap. Silence never expires an interval.
+
+Pass `complete(prompt)` to use another LLM returning JSON text. Use a distinct
+`model` identifier for each backend/model when sharing a checkpoint. Invalid
+batches raise an error; completed batches are reusable on the next run.
