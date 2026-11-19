@@ -2,6 +2,7 @@
 import argparse
 from collections import defaultdict
 import json
+import re
 from pathlib import Path
 
 # Source excerpts anchor the editorial cues to their messages in this snapshot.
@@ -52,11 +53,45 @@ def replay_data(graph, labels, intervals):
     return dict(nodes=graph["nodes"], messages=messages, tasks=tasks)
 
 
+def anonymize(data):
+    """Replace roster names and recorded account aliases before either export."""
+    accounts = {"CL": ("chengcli",), "CS": ("cshsgy",), "TH": ("happysky19", "tianhaol"),
+                "LF": ("linfel", "Linfeng Li"), "XZ": ("UCzhangxi",), "JL": ("JiachenLiu-Atmos", "Jiachen Liu"),
+                "ZH": ("zoeyzyhu", "Zoey Hu"), "JH": ("jihenghu", "Jiheng Hu"),
+                "XY": ("XinyueWang05", "Xinyue Wang")}
+    lookup = {}
+    for node in data["nodes"]:
+        for name in [node["slack_id"], *node.get("names", []), *accounts.get(node["id"], ())]:
+            lookup[name.casefold()] = node["id"]
+    choices = "|".join(re.escape(k) for k in sorted(lookup, key=len, reverse=True))
+    pattern = re.compile(r"(?<![^\W_])(?:" + choices + r")(?![^\W_])", re.I)
+    def scrub(value):
+        value = re.sub(r"<@([A-Z0-9]+)(?:\|[^>]*)?>", lambda m: lookup.get(m[1].lower(), "participant"), value)
+        value = re.sub(r"<https?://[^>\n]+>", "[link]", value)
+        value = re.sub(r"https?://[^\s<>|]+", "[link]", value)
+        value = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[email]", value)
+        value = pattern.sub(lambda m: lookup[m[0].casefold()], value)
+        return re.sub(r"\b(" + "|".join(lookup.values()) + r") [ \t]*\1\b", r"\1", value)
+    for m in data["messages"]:
+        m["text"] = scrub(m["text"])
+        if m["cue"]:
+            m["cue"] = [scrub(t) for t in m["cue"]]
+    for t in data["tasks"]:
+        for key in ("task", "evidence", "waiting"):
+            if t[key]:
+                t[key] = scrub(t[key])
+    data["nodes"] = [{"id": n["id"]} for n in data["nodes"]]
+
+
 def render_replay(graph, labels, intervals, output):
     data = replay_data(graph, labels, intervals)
+    anonymize(data)
+    from replay_frame import compose_frames
+    frames = compose_frames(data)
     if Path(output).suffix.lower() == ".mp4":
         from replay_video import render_video
-        return render_video(data, output)
+        return render_video(frames, output)
+    data["frames"] = list(frames)
     payload = json.dumps(data,
                          ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     template = Path(__file__).with_name("replay.html").read_text()

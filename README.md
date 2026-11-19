@@ -110,16 +110,16 @@ From the repository directory, render the interactive replay:
 python animate_conversation.py ../conversation-graph.json ../conversation-labels.json ../participant-status.json ../conversation-replay.html
 ```
 
-Open the resulting file in a browser. Play or scrub across all messages, jump
-to a turning point, and click a participant to inspect their tasks in the
-current thread. The full message can be opened while paused. Nodes retain
-their positions across threads. An arrow runs from the speaker to each person
-mentioned; repeated mentions in the same message share one arrow, which is
-solid when any occurrence addresses that person. The task panel shows all
-current intervals, including closed ones, with the supporting evidence.
+Open the file in a browser. Each frame groups two or three consecutive messages.
+Curved arrows use the message function's color. Solid arrows address a participant;
+dashed arrows mention one. Each speaker has an outer ring and the number of their
+message within the frame. A participant's fill and text show the latest observed
+task state across threads at the end of the frame. Click a message or participant
+to inspect the text and thread-specific task evidence. The message details show
+every function label. When several apply, the legend order determines arrow color.
 
-Use an output path ending in `.mp4` to render a silent 720p cut with Pillow,
-FFmpeg (libx264), and DejaVu fonts. The video shows an excerpt of each message
-and the speaker's latest observed task in that thread. Playback compresses time
-between messages. Five editorial cues are anchored to exact source phrases in
-this snapshot and get longer holds. Both outputs embed conversation content.
+Both exports use two-letter participant codes, including in excerpts, turning
+points, and task evidence. The source snapshots remain the input for regeneration.
+For a silent 1440×840 video, use an output path ending in `.mp4`. The encoder
+requires FFmpeg with librsvg and libx264. It renders the same SVG frames as the
+browser. Ordinary frames last two seconds and editorial turning points last eight.

@@ -1,59 +1,47 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fridica · Conversation replay</title>
+<title>Fridica / Conversation replay</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#101a24;color:#e9f0ee;font:16px/1.45 'Inter',system-ui,sans-serif}main{max-width:1380px;margin:auto;padding:24px clamp(14px,4vw,58px)}header,nav,.controls,.row,.key{display:flex;align-items:center;gap:12px;flex-wrap:wrap}header{justify-content:space-between;border-bottom:1px solid #3e505d;padding-bottom:17px}h1,h2,h3,p{margin:0}h1{font:clamp(27px,4vw,52px)/1.1 'Instrument Serif',Georgia,serif}h2{font:30px/1.1 Georgia,serif}.mono,small,time,.badge{font:12px/1.45 'IBM Plex Mono',monospace;letter-spacing:.025em}.muted,small,time{color:#b0c2c9}button,select,summary{cursor:pointer}button,select{color:inherit;background:#1c2c39;border:1px solid #51636d;border-radius:5px;padding:8px 11px;font:inherit}button:hover,select:hover{border-color:#8bdac9}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #ffe8a5}.layout{display:grid;grid-template-columns:1.12fr 1fr;gap:24px;margin-top:22px}.stage{background:radial-gradient(ellipse at center,#203342,#172530 67%);border:1px solid #3b515d;border-radius:10px;padding:16px}.key{font-size:12px;color:#cbdbdc;gap:18px}.key i{display:inline-block;width:21px;vertical-align:middle;border-top:2px solid #7dddc5;margin-right:5px}.key .ref{border-top:2px dashed #b2c0ce}svg{display:block;width:100%;height:auto}.node{cursor:pointer}.node text{text-anchor:middle;pointer-events:none}.node:focus circle{stroke:white;stroke-width:3}.arrow{animation:reveal .32s ease-out}@keyframes reveal{from{opacity:0}to{opacity:1}}.ping{transform-box:fill-box;transform-origin:center;animation:pulse .8s ease-out forwards}@keyframes pulse{from{transform:scale(.92);opacity:.85}to{transform:scale(1.48);opacity:0}}@media(prefers-reduced-motion:reduce){*{animation:none!important}}.story{background:#f4f0e6;color:#192a32;border-radius:10px;padding:clamp(18px,3vw,34px);display:flex;flex-direction:column;gap:14px;min-width:0}.story small,.story time{color:#455961}.badge{color:#874020;text-transform:uppercase;font-weight:700}.quote{font:clamp(19px,2vw,29px)/1.32 Georgia,serif;overflow-wrap:anywhere}.msg{white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;font-size:15px;margin-top:10px}.story details{margin-top:auto;border-top:1px solid #b8c3ba;padding-top:12px}.controls{margin:18px 0}.controls input{flex:1;min-width:140px;accent-color:#85dfca}.play{background:#9be5d0;color:#142b2e;border:0;min-width:82px;font-weight:700}.panels{display:grid;grid-template-columns:1.12fr 1fr;gap:24px}.panel{border-top:1px solid #495961;padding-top:15px;min-width:0}.panel h3{font-size:17px}.task,.cut{border-bottom:1px solid #344651;padding:8px 0;font-size:14px}.task b{color:#a5e3d1}.cut{display:block;background:none;border-radius:0;border-width:0 0 1px;text-align:left;width:100%}.cut span{color:#f4b695;margin-right:9px}.panel details{font-size:13px;color:#b4c8ce}.tasks{max-height:270px;overflow:auto}button:disabled{opacity:.45}summary{font-size:14px}.thread{max-width:95%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row{justify-content:space-between}@media(max-width:780px){.layout,.panels{grid-template-columns:1fr}.layout{gap:12px}.stage{padding:10px}.controls{position:sticky;bottom:0;z-index:2;background:#101a24;padding:7px}.controls input{order:4;flex-basis:100%}main{padding-bottom:25px}}
-</style><main><header><h1>Fridica / Conversation replay</h1><span class="mono" id="totals"></span></header>
-<div class="layout"><section class="stage"><div class="row"><small>PARTICIPANTS</small><small id="round"></small></div><svg id="graph" viewBox="0 0 580 350" aria-label="Directed participant mention graph"></svg><div class="key"><span><i></i>Addressed</span><span><i class="ref"></i>Referenced or unclear</span><span>● Speaker</span></div></section>
-<article class="story"><small class="thread" id="thread"></small><div class="badge" id="type"></div><h2 id="headline"></h2><p class="quote" id="excerpt"></p><div><strong id="author"></strong> · <time id="time"></time></div><details id="detail"><summary>Full message</summary><div class="msg" id="full"></div></details></article></div>
-<nav class="controls" aria-label="Playback"><button id="play" class="play">Play</button><button id="prev" aria-label="Previous message">←</button><button id="next" aria-label="Next message">→</button><input id="seek" type="range" min="0" value="0" aria-label="Message position"><span id="count" class="mono"></span><select id="speed" aria-label="Playback speed"><option value=".5">0.5×</option><option value="1" selected>1×</option><option value="3">3×</option><option value="8">8×</option></select></nav>
-<div class="panels"><section class="panel"><div class="row"><h3>Task status in this thread</h3><select id="person" aria-label="Inspect participant"></select></div><div class="tasks" id="tasks"></div></section><section class="panel"><h3>Turning points</h3><div id="cuts"></div></section></div></main>
-<script id="data" type="application/json">__REPLAY_DATA__</script>
-<script>
+*{box-sizing:border-box}body{margin:0;background:#11151c;color:#f4f3ed;font:16px/1.45 Inter,system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:0 2vw 3rem}svg{display:block;width:100%;height:auto}svg [role=button],button,select,summary{cursor:pointer}.active-ring{animation:pulse 1.6s ease-out infinite}@keyframes pulse{50%{stroke-width:5;opacity:.75}}@media(prefers-reduced-motion:reduce){.active-ring{animation:none}}svg [role=button]:focus-visible{outline:2px solid white}nav,.row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}nav{padding:12px 0 20px;border-bottom:1px solid #465060}input{flex:1;min-width:130px;accent-color:#a6e8d4}button,select{border:1px solid #556171;background:#1a202a;color:inherit;font:inherit;border-radius:6px;padding:7px 11px}button:disabled{opacity:.4}button:hover,select:hover{border-color:#a6e8d4}#play{background:#a6e8d4;color:#11151c;font-weight:700;min-width:75px}h2{font:24px Georgia,serif;margin:16px 0}.panels{display:grid;grid-template-columns:1fr 1fr;gap:24px}details{border-top:1px solid #414957;padding:9px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;max-height:320px;overflow:auto}#cuts button{display:block;margin:5px 0;text-align:left}.row{justify-content:space-between}#tasks{max-height:330px;overflow:auto}.tag{font-size:13px;color:#d0dadf}.mobile-title{display:none}@media(max-width:760px){.panels{grid-template-columns:1fr}.mobile-title{display:block;font:28px Georgia,serif;margin:16px 0}main{padding:0 12px 32px}nav{position:sticky;bottom:0;background:#11151c;z-index:1}input{flex-basis:100%;order:4}}
+</style><main><h1 class="mobile-title">Fridica / Conversation replay</h1><div id="stage"></div>
+<nav aria-label="Playback"><button id="play">Play</button><button id="prev" aria-label="Previous frame">←</button><button id="next" aria-label="Next frame">→</button><input id="seek" type="range" min="0" value="0" aria-label="Frame position"><span id="counter"></span><select id="speed" aria-label="Playback speed"><option value=".5">0.5×</option><option value="1" selected>1×</option><option value="3">3×</option><option value="8">8×</option></select></nav>
+<div class="panels"><section><h2>Messages in this frame</h2><div id="messages"></div><h2>Turning points</h2><div id="cuts"></div></section><section><div class="row"><h2>Task status</h2><select id="person" aria-label="Participant"></select></div><label>Thread at message <select id="context"></select></label><div id="tasks"></div></section></div></main>
+<script id="data" type="application/json">__REPLAY_DATA__</script><script>
 'use strict';
-const {nodes,messages,tasks}=JSON.parse(document.getElementById('data').textContent);
-const el=id=>document.getElementById(id), ns='http://www.w3.org/2000/svg';
-const names=new Map(nodes.map(n=>[n.id,n.names?.[0]||n.id])), slack=new Map(nodes.map(n=>[n.slack_id,names.get(n.id)]));
-const title=s=>s.replaceAll('_',' '), fmt=new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
-function plain(s){return s.replace(/<@([A-Z0-9]+)(?:\|[^>]*)?>/g,(_,id)=>slack.get(id)||id).replace(/<([^>|]+)\|([^>]+)>/g,'$2').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/[*`]/g,'').trim()}
-const roots=new Map();for(const m of messages)if(!roots.has(m.thread))roots.set(m.thread,plain(m.text).split('\n')[0].replace(/^:tada:\s*/,'').slice(0,105));
-let pos=0,playing=false,timer;
-function svg(tag,attrs,parent){const v=document.createElementNS(ns,tag);for(const [k,val] of Object.entries(attrs))v.setAttribute(k,val);parent.append(v);return v}
-function text(parent,tag,value,cls){const n=document.createElement(tag);n.textContent=value;if(cls)n.className=cls;parent.append(n);return n}
-const xy=new Map(nodes.map((n,i)=>{const a=-Math.PI/2+i*2*Math.PI/nodes.length;return[n.id,[290+216*Math.cos(a),166+123*Math.sin(a)]]}));
-function draw(m){
- const g=el('graph');g.replaceChildren();const defs=svg('defs',{},g);
- for(const [id,color] of [['direct','#86e3c8'],['ref','#b2c0ce']]){const mark=svg('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto'},defs);svg('path',{d:'M0 0 L10 5 L0 10 Z',fill:color},mark)}
- svg('ellipse',{cx:290,cy:166,rx:216,ry:123,fill:'none',stroke:'#354957','stroke-dasharray':'2 7'},g);
- const targets=new Map();for(const v of m.mentions)targets.set(v.target,targets.get(v.target)||v.role==='addressed');
- const [x,y]=xy.get(m.sender);
- for(const [id,direct] of targets){const [tx,ty]=xy.get(id),dx=tx-x,dy=ty-y,len=Math.hypot(dx,dy);
- const path=len?`M ${x+dx*22/len} ${y+dy*22/len} L ${tx-dx*24/len} ${ty-dy*24/len}`:`M ${x-17} ${y-9} C ${x-62} ${y-53}, ${x+14} ${y-55}, ${x+5} ${y-22}`;
- svg('path',{d:path,fill:'none',stroke:direct?'#86e3c8':'#b2c0ce','stroke-width':2,'stroke-dasharray':direct?'none':'5 5','marker-end':'url(#'+(direct?'direct':'ref')+')',class:'arrow'},g)}
- for(const n of nodes){const [cx,cy]=xy.get(n.id),active=n.id===m.sender;
- const group=svg('g',{class:'node',role:'button',tabindex:0,'aria-label':'Inspect '+names.get(n.id)},g);
- if(active)svg('circle',{cx,cy,r:22,fill:'none',stroke:'#90efd6',class:'ping'},group);
- svg('circle',{cx,cy,r:20,fill:active?'#9be5d0':'#1a2b38',stroke:active||targets.has(n.id)?'#9be5d0':'#667981','stroke-width':2},group);
- svg('text',{x:cx,y:cy+5,fill:active?'#142830':'#eef5ee','font-size':15,'font-weight':700},group).textContent=n.id;
- svg('text',{x:cx,y:cy+37,fill:'#dbe6e7','font-size':13},group).textContent=names.get(n.id);
- group.onclick=()=>{el('person').value=n.id;showTasks()};group.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();group.onclick()}}}
-}
-function showTasks(){const m=messages[pos],id=el('person').value||m.sender,box=el('tasks');box.replaceChildren();
- const rows=tasks.filter(t=>t.person===id&&t.thread===m.thread&&t.start<=pos&&pos<t.end).sort((a,b)=>b.start-a.start);
- if(!rows.length)text(box,'p','No task state observed for '+names.get(id)+' in this thread yet.','task muted');
- for(const t of rows){const div=text(box,'div','','task');text(div,'b',title(t.status)+' · ');div.append(t.task);
- const d=text(div,'details','');text(d,'summary',t.waiting?'Waiting for '+(names.get(t.waiting)||t.waiting):t.outcome?title(t.outcome):'Evidence');text(d,'p',plain(t.evidence))}}
-function show(i){pos=Math.max(0,Math.min(messages.length-1,i));const m=messages[pos],body=plain(m.text),c=m.cue;
- el('seek').value=pos;el('count').textContent=(pos+1)+' / '+messages.length;el('round').textContent='Turn '+m.turn+' · Round '+m.round;el('thread').textContent=roots.get(m.thread);
- el('type').textContent=c?c[1]:m.functions.slice(0,3).map(title).join(' · ');el('headline').textContent=c?c[2]:names.get(m.sender);
- const excerpt=body.length>245?body.slice(0,242).replace(/\s+\S*$/,'')+'…':body;
- el('excerpt').textContent=c?'“'+plain(c[0])+'”':excerpt;el('author').textContent=c?names.get(m.sender):m.sender;
- el('time').textContent=fmt.format(Number(m.ts)*1000);el('full').textContent=m.text;el('prev').disabled=!pos;el('next').disabled=pos===messages.length-1;draw(m);showTasks()}
+const el=id=>document.getElementById(id);
+const {nodes,messages,tasks,frames}=JSON.parse(el('data').textContent);
+const narrow=matchMedia('(max-width:760px)');
+let position=0,playing=false,timer;
+function add(parent,tag,label){const node=document.createElement(tag);node.textContent=label;parent.append(node);return node}
+function status(){const index=Number(el('context').value),m=messages[index],person=el('person').value||m.sender,box=el('tasks');box.replaceChildren();
+ const current=tasks.filter(t=>t.person===person&&t.thread===m.thread&&t.start<=index&&index<t.end).sort((a,b)=>b.start-a.start);
+ if(!current.length)add(box,'p','No task state observed for '+person+' in thread '+(m.thread+1)+'.');
+ for(const t of current){const d=add(box,'details','');add(d,'summary',person+' · '+t.status.replaceAll('_',' ')+' · '+t.task);add(d,'p',t.evidence);if(t.waiting||t.outcome)add(d,'p',t.waiting?'Waiting for '+t.waiting:t.outcome)}}
 function stop(){clearTimeout(timer);playing=false;el('play').textContent='Play'}
-function tick(){clearTimeout(timer);if(!playing)return;timer=setTimeout(()=>{if(pos===messages.length-1){stop();return}show(pos+1);tick()},(messages[pos].cue?6000:850)/Number(el('speed').value))}
+function inspect(i){stop();el('context').value=i;el('person').value='';status();const d=el('msg'+i);d.open=true;d.scrollIntoView({block:'nearest'})}
+function show(i){
+ position=i;const frame=frames[i],stage=el('stage');stage.innerHTML=frame.svg;
+ if(narrow.matches){const full=stage.firstElementChild;stage.replaceChildren();
+ for(const [slice,view] of ['20 96 691 565','725 96 700 539','23 641 690 110','730 641 690 133'].entries()){
+ const part=full.cloneNode(true);part.setAttribute('viewBox',view);part.removeAttribute('width');part.removeAttribute('height');
+ for(const marker of part.querySelectorAll('marker'))marker.id+='s'+slice;
+ for(const path of part.querySelectorAll('[marker-end]'))path.setAttribute('marker-end',path.getAttribute('marker-end').replace(')','s'+slice+')'));
+ stage.append(part)}}
+ el('seek').value=i;el('counter').textContent=(i+1)+' / '+frames.length;
+ el('prev').disabled=i===0;el('next').disabled=i===frames.length-1;
+ el('messages').replaceChildren();el('context').replaceChildren();
+ for(const index of frame.ids){const m=messages[index];el('context').append(new Option((index+1)+' · '+m.sender,index));
+ const d=add(el('messages'),'details','');d.id='msg'+index;add(d,'summary',(index+1)+' · '+m.sender+' · Thread '+(m.thread+1)+' · '+(m.functions.join(', ').replaceAll('_',' ')||'message'));add(d,'pre',m.text);d.ontoggle=()=>{if(d.open)stop()}}
+ el('context').value=frame.ids.at(-1);status();
+}
+function activate(e){const target=e.target.closest('[data-message],[data-person]');if(!target)return;
+ if(target.hasAttribute('data-message'))inspect(Number(target.dataset.message));else{stop();el('person').value=target.dataset.person;status()}}
+el('stage').onclick=activate;el('stage').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(e)}};
 function jump(i){stop();show(i)}
-el('play').onclick=()=>{if(playing){stop();return}if(pos===messages.length-1)show(0);el('detail').open=false;playing=true;el('play').textContent='Pause';tick()};
-el('prev').onclick=()=>jump(pos-1);el('next').onclick=()=>jump(pos+1);el('seek').max=messages.length-1;el('seek').oninput=e=>jump(Number(e.target.value));el('speed').onchange=tick;el('detail').ontoggle=()=>{if(el('detail').open)stop()};
-el('person').append(new Option('Follow speaker',''));for(const n of nodes)el('person').append(new Option(names.get(n.id),n.id));el('person').onchange=showTasks;
-for(const [i,m] of messages.entries())if(m.cue){const b=text(el('cuts'),'button','','cut');text(b,'span',m.cue[1]);b.append(m.cue[2]);b.onclick=()=>jump(i)}
-el('totals').textContent=nodes.length+' participants · '+roots.size+' threads · '+messages.length.toLocaleString()+' messages';show(0);
+function tick(){clearTimeout(timer);if(playing)timer=setTimeout(()=>{if(position===frames.length-1){stop();return}show(position+1);tick()},frames[position].seconds*1000/Number(el('speed').value))}
+el('play').onclick=()=>{if(playing){stop();return}if(position===frames.length-1)show(0);playing=true;el('play').textContent='Pause';tick()};
+el('prev').onclick=()=>jump(position-1);el('next').onclick=()=>jump(position+1);el('seek').max=frames.length-1;el('seek').oninput=e=>jump(+e.target.value);el('speed').onchange=tick;
+el('person').append(new Option('Follow speaker',''));for(const n of nodes)el('person').append(new Option(n.id,n.id));
+el('person').onchange=status;el('context').onchange=status;narrow.onchange=()=>show(position);
+for(const [j,f] of frames.entries())for(const index of f.ids){const cue=messages[index].cue;if(cue){const b=add(el('cuts'),'button',cue[1]+' · '+cue[2]);b.onclick=()=>{jump(j);inspect(index)}}}
+show(0);
 </script></html>
