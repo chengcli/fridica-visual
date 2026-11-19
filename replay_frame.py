@@ -7,6 +7,8 @@ import re
 import textwrap
 from zoneinfo import ZoneInfo
 
+FRAMES_PER_SECOND = 4
+
 KINDS = dict(decision="#ffad72", question="#8cccff", proposal="#c2a4ff",
              action_request="#ff8da8", review="#ffd273", commitment="#83dec2",
              finding="#9dd679", status_update="#9abcd4", message="#a5abb7")
@@ -130,4 +132,4 @@ def compose_frames(data):
             svg.extend([f'<path d="M{x} {y-5} h16" stroke="{color}" stroke-width="4"/>',caption(x+23,y,name.replace('_',' '),16)])
         svg.extend([caption(40,780,'Solid arrow · addressed     /     Dashed arrow · referenced or unclear',15,'#c5c9d2'),
                     f'<rect x="40" y="804" width="1360" height="4" fill="#313a48"/><rect x="40" y="804" width="{1360*number/len(groups)}" height="4" fill="#aad9cd"/></svg>'])
-        yield {'ids':ids,'svg':''.join(svg),'seconds':8 if any(m['cue'] for m,_,_ in items) else 2}
+        yield {'ids':ids,'svg':''.join(svg),'seconds':1 / FRAMES_PER_SECOND}
